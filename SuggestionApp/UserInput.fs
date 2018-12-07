@@ -31,6 +31,13 @@ type AddSuggestionOptions = {
     [<Option('d', "Description", Required = true, HelpText="Description of suggestion")>] description: string
 }
 
+[<Verb("respondToSuggestion", HelpText = "Give response for a suggestion. User must be admin")>]
+type RespondToSuggestionOptions = {
+    [<Option("id", Required = true, HelpText="Id of suggestion")>] sid: int;
+    [<Option("category", Required = true, HelpText="Category to assign suggestion. Options are: Approved | Considering | NeedsMoreDetail | Rejected")>] category: string;
+    [<Option("notes", Required = true, HelpText="Notes for suggestion response")>] notes: string;        
+}
+
 type UiCommand = 
     | ExitCommand
     | ResetScreenCommand
@@ -53,7 +60,8 @@ let tryProcessInput (inputArgs: string []) =
             ChangeUserOptions,
             GetAllSuggestionsOptions,
             GetSuggestionOptions,
-            AddSuggestionOptions> inputArgs
+            AddSuggestionOptions,
+            RespondToSuggestionOptions> inputArgs
     match result with
     | :? CommandLine.Parsed<obj> as command ->
         match command.Value with
@@ -64,6 +72,7 @@ let tryProcessInput (inputArgs: string []) =
         | :? GetAllSuggestionsOptions -> AppRequest GetAllSuggestions
         | :? GetSuggestionOptions as options -> AppRequest <| GetSuggestion options.sid
         | :? AddSuggestionOptions as options -> AppRequest <| PostSuggestion(options.title, options.description)
+        | :? RespondToSuggestionOptions as options -> AppRequest <| PostSuggestionResponse(options.sid, options.category, options.notes)
         | unkownParsedvalue -> 
             UiError <| sprintf "Unexpected verb options was parsed. Missing Option configuration?: %s: %A." (unkownParsedvalue.GetType().Name) unkownParsedvalue
     | :? CommandLine.NotParsed<obj> ->

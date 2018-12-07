@@ -18,4 +18,23 @@ module Suggestion =
         |> List.tryFind(fun elem -> 
             match elem with
             | Proposed { Suggestion = suggestion }
+            | Responded { Suggestion = suggestion }
                 -> suggestion.Id = sid)
+
+    let replaceInList (predicate: Suggestion -> bool) (replacement: Suggestion) (currentSuggestions: Suggestion list) = 
+        currentSuggestions
+        |> List.map (fun elem -> 
+            if predicate elem then
+                replacement
+            else 
+                elem)
+
+[<RequireQualifiedAccess>]
+module ResponseCategory = 
+    let tryParse (categoryString: string) = 
+        match categoryString.Trim().ToLowerInvariant() with
+        | "approved" -> Some Approved
+        | "considering" -> Some Considering
+        | "needsmoredetail" -> Some NeedsMoreDetail
+        | "rejected" -> Some Rejected
+        | _ -> None

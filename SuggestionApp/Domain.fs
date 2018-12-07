@@ -36,8 +36,27 @@ type ProposedSuggestion = {
     Suggestion: SuggestionInfo
 }
 
+type ResponseCategory = 
+    | Approved
+    | Considering
+    | NeedsMoreDetail
+    | Rejected
+
+type ResponseInfo = {
+    Responder: AdminInfo
+    ResponseDate: DateTime
+    Category: ResponseCategory
+    Notes: string
+}
+
+type SuggestionWithResponse = {
+    Suggestion: SuggestionInfo
+    Response: ResponseInfo
+}
+
 type Suggestion = 
     | Proposed of ProposedSuggestion
+    | Responded of SuggestionWithResponse
 
 type AppRequest =
     | GetUser
@@ -45,6 +64,7 @@ type AppRequest =
     | GetAllSuggestions
     | GetSuggestion of int
     | PostSuggestion of title: string * description: string
+    | PostSuggestionResponse of sid: int * category: string * notes: string
 
 type AppState = {
     Users: User list
