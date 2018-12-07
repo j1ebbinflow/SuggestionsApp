@@ -54,9 +54,22 @@ type SuggestionWithResponse = {
     Response: ResponseInfo
 }
 
+type ClosureInfo = {
+    Notes: string option
+    ClosureDate: DateTime
+    Closer: AdminInfo
+}
+
+type ClosedSuggestion = {
+    Suggestion: SuggestionInfo
+    Response: ResponseInfo
+    Closure: ClosureInfo
+}
+
 type Suggestion = 
     | Proposed of ProposedSuggestion
     | Responded of SuggestionWithResponse
+    | Closed of ClosedSuggestion
 
 type AppRequest =
     | GetUser
@@ -65,6 +78,7 @@ type AppRequest =
     | GetSuggestion of int
     | PostSuggestion of title: string * description: string
     | PostSuggestionResponse of sid: int * category: string * notes: string
+    | PostCloseSuggestion of sid: int * notes: string option
 
 type AppState = {
     Users: User list

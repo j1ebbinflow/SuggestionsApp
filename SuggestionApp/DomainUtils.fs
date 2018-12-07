@@ -19,6 +19,7 @@ module Suggestion =
             match elem with
             | Proposed { Suggestion = suggestion }
             | Responded { Suggestion = suggestion }
+            | Closed { Suggestion = suggestion }
                 -> suggestion.Id = sid)
 
     let replaceInList (predicate: Suggestion -> bool) (replacement: Suggestion) (currentSuggestions: Suggestion list) = 

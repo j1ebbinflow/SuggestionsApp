@@ -38,6 +38,12 @@ type RespondToSuggestionOptions = {
     [<Option("notes", Required = true, HelpText="Notes for suggestion response")>] notes: string;        
 }
 
+[<Verb("closeSuggestion", HelpText = "Close a suggestion. User must be admin")>]
+type CloseSuggestionOptions = {
+    [<Option("id", Required = true, HelpText="Id of suggestion")>] sid: int;
+    [<Option("notes", HelpText="Notes for closure")>] notes: string option;
+}
+
 type UiCommand = 
     | ExitCommand
     | ResetScreenCommand
@@ -61,7 +67,8 @@ let tryProcessInput (inputArgs: string []) =
             GetAllSuggestionsOptions,
             GetSuggestionOptions,
             AddSuggestionOptions,
-            RespondToSuggestionOptions> inputArgs
+            RespondToSuggestionOptions,
+            CloseSuggestionOptions> inputArgs
     match result with
     | :? CommandLine.Parsed<obj> as command ->
         match command.Value with
@@ -73,6 +80,7 @@ let tryProcessInput (inputArgs: string []) =
         | :? GetSuggestionOptions as options -> AppRequest <| GetSuggestion options.sid
         | :? AddSuggestionOptions as options -> AppRequest <| PostSuggestion(options.title, options.description)
         | :? RespondToSuggestionOptions as options -> AppRequest <| PostSuggestionResponse(options.sid, options.category, options.notes)
+        | :? CloseSuggestionOptions as options -> AppRequest <| PostCloseSuggestion(options.sid, options.notes)
         | unkownParsedvalue -> 
             UiError <| sprintf "Unexpected verb options was parsed. Missing Option configuration?: %s: %A." (unkownParsedvalue.GetType().Name) unkownParsedvalue
     | :? CommandLine.NotParsed<obj> ->
