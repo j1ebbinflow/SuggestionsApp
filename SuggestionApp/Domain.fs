@@ -86,3 +86,10 @@ type AppState = {
     Suggestions: Suggestion list
     NextId: int
 }
+
+type RequestResult = {
+    Output: string
+    NextState: AppState
+}
+
+

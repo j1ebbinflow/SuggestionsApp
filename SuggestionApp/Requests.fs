@@ -5,60 +5,152 @@ open Domain
 open DomainUtils
 
 let getUser (state: AppState) =
-    Output.displayUser state.CurrentUser
-    state
+    Ok {
+        Output = sprintf "Current User: %A" state.CurrentUser
+        NextState = state
+    }
 
 let postChangeUser (state: AppState) targetEmail = 
     match User.tryFindByEmail targetEmail state.Users with
     | None -> 
-        printfn "Could not find user with email: %s" targetEmail
-        state
+        Error { 
+            Output = sprintf "Error: Could not find user with email: %s" targetEmail
+            NextState = state
+        }
     | Some user -> 
-        let newState = { state with CurrentUser = user}
-        Output.displayUser user
-        newState
+        Ok {
+            Output = sprintf "Current User: %A" user
+            NextState = { state with CurrentUser = user }
+        }
 
 let getSuggestion (state: AppState) suggestionId = 
     match Suggestion.tryFindById suggestionId state.Suggestions with
     | None -> 
-        printfn "Could not find suggestion with id: %d" suggestionId
-        state
-    | Some suggestion -> 
-        printfn "Suggestion %d: %A" suggestionId suggestion   
-        state
+        Error { 
+            Output = sprintf "Error: Could not find suggestion with id: %d" suggestionId
+            NextState = state
+        }
+    | Some suggestion ->
+        Ok {
+            Output = sprintf "Suggestion %d: %A" suggestionId suggestion  
+            NextState = state
+        }
 
 let getAllSuggestions (state: AppState) = 
-    state.Suggestions
-    |> List.iter(fun elem -> printfn "%A" elem )
-    state
+    let output = 
+        state.Suggestions
+        |> List.map(fun elem -> sprintf "%A" elem )
+        |> String.concat "\n"
+    Ok {
+        Output = output
+        NextState = state
+    }
 
 let postSuggestion title description (state: AppState) = 
+    let sid = state.NextId
     let newSuggestion = Proposed {
         Suggestion = {
-            Id = state.NextId
+            Id = sid
             Title = title
             Description = description
             Creator = state.CurrentUser
             ProposedDate = DateTime.UtcNow
         }
     }
-    { state with NextId = state.NextId + 1; Suggestions = newSuggestion::state.Suggestions }
+    Ok {
+        Output = sprintf "Suggestion with id %d was created" sid
+        NextState = { state with NextId = state.NextId + 1; Suggestions = newSuggestion::state.Suggestions }
+    }
+    
+let useCurrentUserIfAdmin state = 
+    match state.CurrentUser with
+    | NormalUser _ -> 
+        Error { 
+            Output = "Current user is not an admin and cannot respond to a suggestion"
+            NextState = state
+        }
+    | AdminUser admin -> 
+        Ok admin
+
+let tryParseCategory category state = 
+    match ResponseCategory.tryParse category with 
+    | None -> 
+        Error { 
+            Output = sprintf "Could not match category: %s to a system option. Options are: %A" category (typedefof<ResponseCategory>)
+            NextState = state
+        }
+    | Some rCategory->
+        Ok rCategory
+
+let trySelectSuggestion sid state =
+    match Suggestion.tryFindById sid state.Suggestions with
+    | None -> 
+        Error { 
+            Output = sprintf "Could not find suggestion with id: %d" sid
+            NextState = state
+        }
+    | Some suggestion -> 
+        Ok suggestion
+
+let postSuggestionResponse' sid category notes (state: AppState) = 
+    state
+    |> useCurrentUserIfAdmin
+    |> Result.bind(fun admin -> 
+        tryParseCategory category state
+        |> Result.bind(fun category -> Ok (admin, category))
+        )
+    |> Result.bind(fun (admin, category) -> 
+        trySelectSuggestion sid state
+        |> Result.bind(fun suggestion -> Ok (admin, category, suggestion))
+        )
+    |> Result.bind(fun (admin, category, suggestion) -> 
+        match suggestion with
+        | Proposed { Suggestion = sInfo } -> 
+            let newSuggestion = 
+                Responded {
+                    Suggestion = sInfo
+                    Response = {
+                        Responder = admin
+                        Category = category
+                        Notes = notes
+                        ResponseDate = DateTime.UtcNow
+                    }
+                }
+            let suggestions' = Suggestion.replaceInList (fun s -> s = suggestion) newSuggestion state.Suggestions
+            Ok {
+                Output = sprintf "Updated Suggestion: %A" newSuggestion
+                NextState = { state with Suggestions = suggestions' }
+            }
+
+        | Responded _
+        | Closed _ -> 
+            Error {
+                Output = sprintf "Suggestion with id: %d was not in the proposed state, so it could not be responded to" sid
+                NextState = state
+            }
+    )
 
 let postSuggestionResponse sid category notes (state: AppState) = 
     match state.CurrentUser with
     | NormalUser _ -> 
-        printfn "Current user is not an admin and cannot respond to a suggestion"
-        state
+        Error { 
+            Output = "Current user is not an admin and cannot respond to a suggestion"
+            NextState = state
+        }
     | AdminUser admin -> 
         match ResponseCategory.tryParse category with 
         | None -> 
-            printfn "Could not match category: %s to a system option. Options are: %A" category (typedefof<ResponseCategory>)
-            state
+            Error { 
+                Output = sprintf "Could not match category: %s to a system option. Options are: %A" category (typedefof<ResponseCategory>)
+                NextState = state
+            }
         | Some rCategory -> 
             match Suggestion.tryFindById sid state.Suggestions with
             | None -> 
-                printfn "Could not find suggestion with id: %d" sid
-                state
+                Error {
+                    Output = sprintf "Could not find suggestion with id: %d" sid
+                    NextState = state
+                }
             | Some suggestion -> 
                 match suggestion with
                 | Proposed { Suggestion = sInfo } -> 
@@ -73,22 +165,31 @@ let postSuggestionResponse sid category notes (state: AppState) =
                             }
                         }
                     let suggestions' = Suggestion.replaceInList (fun s -> s = suggestion) newSuggestion state.Suggestions
-                    { state with Suggestions = suggestions' }
+                    Ok {
+                        Output = sprintf "Updated Suggestion: %A" newSuggestion
+                        NextState = { state with Suggestions = suggestions' }
+                    }
                 | Responded _
                 | Closed _ -> 
-                    printfn "Suggestion with id: %d was not in the proposed state, so it could not be responded to" sid
-                    state
+                    Error {
+                        Output = sprintf "Suggestion with id: %d was not in the proposed state, so it could not be responded to" sid
+                        NextState = state
+                    }
 
 let postCloseSuggestion sid notes (state: AppState) = 
     match state.CurrentUser with
     | NormalUser _ -> 
-        printfn "Current user is not an admin and cannot respond to a suggestion"
-        state
+         Error { 
+            Output = "Current user is not an admin and cannot respond to a suggestion"
+            NextState = state
+        }
     | AdminUser admin -> 
         match Suggestion.tryFindById sid state.Suggestions with
         | None -> 
-            printfn "Could not find suggestion with id: %d" sid
-            state
+            Error {
+                Output = sprintf "Could not find suggestion with id: %d" sid
+                NextState = state
+            }
         | Some suggestion -> 
             match suggestion with
             | Responded sug ->
@@ -103,11 +204,16 @@ let postCloseSuggestion sid notes (state: AppState) =
                         }
                     }
                 let suggestions' = Suggestion.replaceInList (fun s -> s = suggestion) newSuggestion state.Suggestions
-                { state with Suggestions = suggestions' }
+                Ok {
+                    Output = sprintf "Updated Suggestion: %A" newSuggestion
+                    NextState = { state with Suggestions = suggestions' }
+                }
             | Proposed _ 
             | Closed _ -> 
-                printfn "Suggestion with id: %d was not in the proposed state, so it could not be responded to" sid
-                state
+                Error {
+                    Output = sprintf "Suggestion with id: %d was not in the responded state, so it could not be closed to" sid
+                    NextState = state
+                }
 
 let processRequest (request: AppRequest) (state: AppState) = 
     match request with
@@ -118,7 +224,3 @@ let processRequest (request: AppRequest) (state: AppState) =
     | PostSuggestion(title, description) -> postSuggestion title description state
     | PostSuggestionResponse(sid, category, notes) -> postSuggestionResponse sid category notes state
     | PostCloseSuggestion(sid, notes) -> postCloseSuggestion sid notes state
-<<<<<<< Updated upstream
-=======
-
->>>>>>> Stashed changes

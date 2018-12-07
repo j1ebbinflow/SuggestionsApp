@@ -1,8 +1,4 @@
-<<<<<<< Updated upstream
 module ApplicationState
-=======
-﻿module ApplicationState
->>>>>>> Stashed changes
 
 open Domain
 open System
@@ -53,7 +49,3 @@ let initialState = {
     Suggestions = [suggestionOne; suggestionTwo]
     NextId = 3
 }
-<<<<<<< Updated upstream
-=======
-
->>>>>>> Stashed changes

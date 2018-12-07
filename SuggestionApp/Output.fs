@@ -1,7 +1,6 @@
 module Output
 
 open System
-open Domain
 
 let resetScreen () = 
     Console.Clear()
@@ -11,6 +10,7 @@ let displayFatal message =
     resetScreen ()
     printfn "An Fatal Error occured: %s. Exiting." message
 
-let displayUser (user: User) = 
+let displayMessage successMessage message = 
     resetScreen ()
-    printfn "Current User: %A" user
+    printfn "Request %s. Response:\n%s" successMessage message
+

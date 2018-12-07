@@ -23,8 +23,13 @@ let rec appCycle (state: AppState) =
         Output.resetScreen ()
         appCycle state
     | AppRequest request ->   
-        let newState = processRequest request state
-        appCycle newState
+        match processRequest request state with
+        | Error data -> 
+            Output.displayMessage "Failed" data.Output
+            appCycle data.NextState
+        | Ok data -> 
+            Output.displayMessage "Succeeded" data.Output
+            appCycle data.NextState
 
 let startAppCycle state =
     Output.resetScreen()
