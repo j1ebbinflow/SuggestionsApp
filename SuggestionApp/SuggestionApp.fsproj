@@ -6,7 +6,15 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <Compile Include="Utils.fs" />
+    <Compile Include="Domain.fs" />
+    <Compile Include="DomainUtils.fs" />
+    <Compile Include="ApplicationState.fs" />
+    <Compile Include="UserInput.fs" />
+    <Compile Include="Output.fs" />
+    <Compile Include="Requests.fs" />
     <Compile Include="Program.fs" />
+
   </ItemGroup>
 
 </Project>
