@@ -14,7 +14,10 @@
     <Compile Include="Output.fs" />
     <Compile Include="Requests.fs" />
     <Compile Include="Program.fs" />
+  </ItemGroup>
 
+  <ItemGroup>
+    <PackageReference Include="CommandLineParser.FSharp" Version="2.2.1" />
   </ItemGroup>
 
 </Project>

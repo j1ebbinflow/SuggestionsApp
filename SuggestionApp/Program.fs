@@ -1,8 +1,33 @@
-﻿// Learn more about F# at http://fsharp.org
+﻿open System
+open UserInput
+open ApplicationState
+open Domain
+open Requests
+open Utils
 
-open System
+let rec appCycle (state: AppState) =
+    let input = Console.ReadLine()
+    Output.resetScreen ()
+    let uiRequest =
+        input
+        |> splitLineIntoArgs
+        |> tryProcessInput
+
+    match uiRequest with
+    | UiError message -> 
+        Output.displayFatal message
+        ()
+    | UiCommand ExitCommand -> ()
+    | UiCommand PreHandledCommand -> appCycle state
+    | UiCommand ResetScreenCommand -> 
+        Output.resetScreen ()
+        appCycle state
+
+let startAppCycle state =
+    Output.resetScreen()
+    appCycle state
 
 [<EntryPoint>]
-let main argv =
-    printfn "Hello World from F#!"
-    0 // return an integer exit code
+let main _ =
+    startAppCycle initialState
+    0
