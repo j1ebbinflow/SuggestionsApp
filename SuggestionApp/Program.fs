@@ -22,6 +22,9 @@ let rec appCycle (state: AppState) =
     | UiCommand ResetScreenCommand -> 
         Output.resetScreen ()
         appCycle state
+    | AppRequest request ->   
+        let newState = processRequest request state
+        appCycle newState
 
 let startAppCycle state =
     Output.resetScreen()

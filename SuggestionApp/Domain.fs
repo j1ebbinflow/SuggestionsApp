@@ -39,6 +39,13 @@ type ProposedSuggestion = {
 type Suggestion = 
     | Proposed of ProposedSuggestion
 
+type AppRequest =
+    | GetUser
+    | PostChangeUser of string
+    | GetAllSuggestions
+    | GetSuggestion of int
+    | PostSuggestion of title: string * description: string
+
 type AppState = {
     Users: User list
     CurrentUser: User
